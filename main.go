@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Rishit1234567889/baseToAdvGo/dbconfig"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/handlers"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/routes"
 	"github.com/Rishit1234567889/baseToAdvGo/serverconfig"
@@ -17,8 +18,11 @@ func main() {
 		log.Fatalf("Failed to load config %v", err)
 	}
 	fmt.Println("App is running i guess ")
-	// 1.7 () Create a new Handler
-	handler := handlers.NewHandlers()
+
+	db := dbconfig.ConnectDB(config.DataBaseUrl) // 2.1 connect to db
+	defer db.Close()
+
+	handler := handlers.NewHandlers() // 1.7 () Create a new Handler
 
 	mux := http.NewServeMux() // 1.0 setUp the HTTP server first
 
