@@ -2,14 +2,53 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Rishit1234567889/baseToAdvGo/internal/dtos"
+	"github.com/Rishit1234567889/baseToAdvGo/internal/middlewares"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/store"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/utils"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/validation"
 )
+
+// 5.1
+// profile.
+func (h *Handler) UserProfile() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*utils.Claims)
+		if !ok {
+			utils.ResponseWithError(w, http.StatusBadRequest, "please login  to continue ")
+			return
+		}
+		userID := claims.UserID
+
+		// check the redis first //7.3
+		cacheKey := fmt.Sprintf("user: %d", userID)
+		if cached, err := h.Redis.Get(r.Context(), cacheKey).Result(); err == nil {
+			var user store.User
+			if err := json.Unmarshal([]byte(cached), &user); err == nil {
+				utils.ResponseWithSuccess(w, http.StatusOK, "success (from cache/redis)", user)
+				return
+			}
+		}
+
+		//Fallback to DB
+		user, err := h.Queries.GetUser(r.Context(), int32(userID))
+		if err != nil {
+			utils.ResponseWithError(w, http.StatusNotFound, "user not found")
+			return
+		}
+
+		//set to redis 7.4
+		userJSON, _ := json.Marshal(user)
+		h.Redis.Set(r.Context(), cacheKey, userJSON, 5*time.Minute)
+		utils.ResponseWithSuccess(w, http.StatusOK, "success", user)
+	}
+}
 
 // login a user 4.1
 func (h *Handler) LoginUserHandler() http.HandlerFunc {

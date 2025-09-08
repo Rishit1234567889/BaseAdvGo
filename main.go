@@ -9,6 +9,7 @@ import (
 	"github.com/Rishit1234567889/baseToAdvGo/internal/handlers"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/routes"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/store"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -22,9 +23,14 @@ func main() {
 	db := config.ConnectDB(configLd.DataBaseUrl) // 2.1 connect to db
 	defer db.Close()
 
+	//connect to redis 7.2
+	rdb := config.ConnectRedis()
+	defer func(rdb *redis.Client) {
+		_ = rdb.Close()
+	}(rdb)
 	queries := store.New(db) // 3.6
 
-	handler := handlers.NewHandlers(db, queries) // 1.7 () Create a new Handler
+	handler := handlers.NewHandlers(db, queries, rdb) // 1.7 () Create a new Handler
 
 	mux := http.NewServeMux() // 1.0 setUp the HTTP server first
 
