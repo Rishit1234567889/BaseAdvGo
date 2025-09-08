@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	// "strings"
 	"time"
 
 	"github.com/Rishit1234567889/baseToAdvGo/internal/dtos"
@@ -118,4 +120,81 @@ func (h *Handler) CreateUserHandler() http.HandlerFunc { //3.*
 	}
 }
 
-//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo1LCJ1c2VybmFtZSI6InJhYSBzaGEiLCJleHAiOjE3NTc0MjEwMzcsImlzcyI6ImFiYXlvbWkifQ.JXuWde_K0O0QeVcxMUkF7p5gFx018F-4E9gSlA_f2ns
+// logout handler 8.0
+func (h *Handler) LogoutHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// extract the jwt claims from the context
+		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*utils.Claims)
+		if !ok {
+			utils.ResponseWithError(w, http.StatusBadRequest, "Please login to continue")
+			return
+		}
+
+		// extract the token from the auth header
+		tokenString := extractTokenFromHeader(r)
+		if tokenString == "" {
+			utils.ResponseWithError(w, http.StatusUnauthorized, "Missing token")
+			return
+		}
+
+		// convert exxireAt to time.Time
+		expirationTime := time.Unix(claims.ExpiresAt, 0)
+		now := time.Now()
+		ttl := expirationTime.Sub(now)
+		if ttl <= 0 {
+			ttl = 5 * time.Minute // fallback ttl
+		}
+
+		err := h.Redis.Set(r.Context(), tokenString, "blacklisted", ttl).Err()
+		if err != nil {
+			utils.ResponseWithError(w, http.StatusInternalServerError, "failed to blacklist token")
+			return
+		}
+
+		// clean user session in redis
+
+		userIDstr := fmt.Sprintf("%d", claims.UserID)
+		if err := h.cleanUserSession(userIDstr); err != nil {
+			fmt.Printf("Error cleaning session for %s : %v\n", userIDstr, err)
+			return
+		}
+		utils.ResponseWithSuccess(w, http.StatusOK, "Logged out successfully", true)
+	}
+}
+
+func extractTokenFromHeader(r *http.Request) string {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+	// parts := strings.SplitN(authHeader, " ", 2)
+	// if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+	// 	return ""
+	// }
+	return authHeader
+}
+
+func (h *Handler) cleanUserSession(userID string) error {
+
+	//session :123:*
+	pattern := fmt.Sprintf("session: %s:*", userID)
+	//Background context for redis
+	ctx := context.Background()
+	// scan to iterate over all the keys matching the pattern declared
+	iter := h.Redis.Scan(ctx, 0, pattern, 0).Iterator()
+
+	// loop through each key from redis
+	for iter.Next(ctx) {
+
+		// delete the key from redis
+		err := h.Redis.Del(ctx, iter.Val()).Err()
+		if err != nil {
+			fmt.Printf("failed to delete session")
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
+	return nil
+}
