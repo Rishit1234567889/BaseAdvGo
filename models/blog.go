@@ -1,6 +1,6 @@
 package models
 
-type Blog struct {
+type Blog struct { //2.1
 	ID      int    `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`

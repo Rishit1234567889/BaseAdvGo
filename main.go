@@ -8,6 +8,7 @@ import (
 	"github.com/Rishit1234567889/baseToAdvGo/dbconfig"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/handlers"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/routes"
+	"github.com/Rishit1234567889/baseToAdvGo/internal/store"
 	"github.com/Rishit1234567889/baseToAdvGo/serverconfig"
 )
 
@@ -22,7 +23,9 @@ func main() {
 	db := dbconfig.ConnectDB(config.DataBaseUrl) // 2.1 connect to db
 	defer db.Close()
 
-	handler := handlers.NewHandlers() // 1.7 () Create a new Handler
+	queries := store.New(db) // 3.6
+
+	handler := handlers.NewHandlers(db, queries) // 1.7 () Create a new Handler
 
 	mux := http.NewServeMux() // 1.0 setUp the HTTP server first
 
@@ -31,7 +34,7 @@ func main() {
 	serverAddr := fmt.Sprintf(":%s", config.ServerPort) // 1.1server instance
 	server := &http.Server{
 		Addr:    serverAddr,
-		Handler: nil,
+		Handler: mux,
 	}
 	fmt.Printf("Server is up and running on PORT %s\n", serverAddr)
 	if err := server.ListenAndServe(); err != nil { // 1.2 Listen

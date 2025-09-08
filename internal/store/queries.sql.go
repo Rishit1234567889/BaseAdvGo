@@ -54,17 +54,16 @@ func (q *Queries) CreateBlog(ctx context.Context, arg CreateBlogParams) (CreateB
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users(username ,email,password,created,updated)
-VALUES ($1,$2,$3,$4,$5)
+
+INSERT INTO users(username ,email,password)
+VALUES ($1,$2,$3)
     RETURNING id,username,email,created,updated
 `
 
 type CreateUserParams struct {
-	Username string       `json:"username"`
-	Email    string       `json:"email"`
-	Password string       `json:"password"`
-	Created  sql.NullTime `json:"created"`
-	Updated  sql.NullTime `json:"updated"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type CreateUserRow struct {
@@ -75,14 +74,9 @@ type CreateUserRow struct {
 	Updated  sql.NullTime `json:"updated"`
 }
 
+// 2.3 after queries
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
-	row := q.queryRow(ctx, q.createUserStmt, createUser,
-		arg.Username,
-		arg.Email,
-		arg.Password,
-		arg.Created,
-		arg.Updated,
-	)
+	row := q.queryRow(ctx, q.createUserStmt, createUser, arg.Username, arg.Email, arg.Password)
 	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
