@@ -30,8 +30,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
+	if q.getProfileByUserIdStmt, err = db.PrepareContext(ctx, getProfileByUserId); err != nil {
+		return nil, fmt.Errorf("error preparing query GetProfileByUserId: %w", err)
+	}
+	if q.getTotalUserCountStmt, err = db.PrepareContext(ctx, getTotalUserCount); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTotalUserCount: %w", err)
+	}
 	if q.getUserStmt, err = db.PrepareContext(ctx, getUser); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUser: %w", err)
+	}
+	if q.getUserByEmailOrUsernameStmt, err = db.PrepareContext(ctx, getUserByEmailOrUsername); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserByEmailOrUsername: %w", err)
 	}
 	if q.listBlogsStmt, err = db.PrepareContext(ctx, listBlogs); err != nil {
 		return nil, fmt.Errorf("error preparing query ListBlogs: %w", err)
@@ -54,9 +63,24 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
 		}
 	}
+	if q.getProfileByUserIdStmt != nil {
+		if cerr := q.getProfileByUserIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getProfileByUserIdStmt: %w", cerr)
+		}
+	}
+	if q.getTotalUserCountStmt != nil {
+		if cerr := q.getTotalUserCountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTotalUserCountStmt: %w", cerr)
+		}
+	}
 	if q.getUserStmt != nil {
 		if cerr := q.getUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserStmt: %w", cerr)
+		}
+	}
+	if q.getUserByEmailOrUsernameStmt != nil {
+		if cerr := q.getUserByEmailOrUsernameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserByEmailOrUsernameStmt: %w", cerr)
 		}
 	}
 	if q.listBlogsStmt != nil {
@@ -106,23 +130,29 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db             DBTX
-	tx             *sql.Tx
-	createBlogStmt *sql.Stmt
-	createUserStmt *sql.Stmt
-	getUserStmt    *sql.Stmt
-	listBlogsStmt  *sql.Stmt
-	listUsersStmt  *sql.Stmt
+	db                           DBTX
+	tx                           *sql.Tx
+	createBlogStmt               *sql.Stmt
+	createUserStmt               *sql.Stmt
+	getProfileByUserIdStmt       *sql.Stmt
+	getTotalUserCountStmt        *sql.Stmt
+	getUserStmt                  *sql.Stmt
+	getUserByEmailOrUsernameStmt *sql.Stmt
+	listBlogsStmt                *sql.Stmt
+	listUsersStmt                *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:             tx,
-		tx:             tx,
-		createBlogStmt: q.createBlogStmt,
-		createUserStmt: q.createUserStmt,
-		getUserStmt:    q.getUserStmt,
-		listBlogsStmt:  q.listBlogsStmt,
-		listUsersStmt:  q.listUsersStmt,
+		db:                           tx,
+		tx:                           tx,
+		createBlogStmt:               q.createBlogStmt,
+		createUserStmt:               q.createUserStmt,
+		getProfileByUserIdStmt:       q.getProfileByUserIdStmt,
+		getTotalUserCountStmt:        q.getTotalUserCountStmt,
+		getUserStmt:                  q.getUserStmt,
+		getUserByEmailOrUsernameStmt: q.getUserByEmailOrUsernameStmt,
+		listBlogsStmt:                q.listBlogsStmt,
+		listUsersStmt:                q.listUsersStmt,
 	}
 }

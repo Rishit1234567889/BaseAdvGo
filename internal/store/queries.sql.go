@@ -88,6 +88,45 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
+const getProfileByUserId = `-- name: GetProfileByUserId :one
+SELECT id, username, email, created, updated
+FROM users
+WHERE id = $1
+`
+
+type GetProfileByUserIdRow struct {
+	ID       int32        `json:"id"`
+	Username string       `json:"username"`
+	Email    string       `json:"email"`
+	Created  sql.NullTime `json:"created"`
+	Updated  sql.NullTime `json:"updated"`
+}
+
+func (q *Queries) GetProfileByUserId(ctx context.Context, id int32) (GetProfileByUserIdRow, error) {
+	row := q.queryRow(ctx, q.getProfileByUserIdStmt, getProfileByUserId, id)
+	var i GetProfileByUserIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Created,
+		&i.Updated,
+	)
+	return i, err
+}
+
+const getTotalUserCount = `-- name: GetTotalUserCount :one
+SELECT COUNT(*) AS total_users
+FROM users
+`
+
+func (q *Queries) GetTotalUserCount(ctx context.Context) (int64, error) {
+	row := q.queryRow(ctx, q.getTotalUserCountStmt, getTotalUserCount)
+	var total_users int64
+	err := row.Scan(&total_users)
+	return total_users, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id ,username,email,created,updated
 FROM users
@@ -109,6 +148,32 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 		&i.ID,
 		&i.Username,
 		&i.Email,
+		&i.Created,
+		&i.Updated,
+	)
+	return i, err
+}
+
+const getUserByEmailOrUsername = `-- name: GetUserByEmailOrUsername :one
+SELECT id, username, email,password, created, updated
+FROM users
+WHERE email = $1 OR username = $2
+LIMIT 1
+`
+
+type GetUserByEmailOrUsernameParams struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+}
+
+func (q *Queries) GetUserByEmailOrUsername(ctx context.Context, arg GetUserByEmailOrUsernameParams) (User, error) {
+	row := q.queryRow(ctx, q.getUserByEmailOrUsernameStmt, getUserByEmailOrUsername, arg.Email, arg.Username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
 		&i.Created,
 		&i.Updated,
 	)

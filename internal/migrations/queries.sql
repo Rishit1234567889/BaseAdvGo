@@ -15,6 +15,24 @@ SELECT id ,username,email,created,updated
 FROM users
 ORDER BY id;
 
+-- name: GetUserByEmailOrUsername :one
+SELECT id, username, email,password, created, updated
+FROM users
+WHERE email = $1 OR username = $2
+LIMIT 1;
+
+
+-- name: GetProfileByUserId :one
+SELECT id, username, email, created, updated
+FROM users
+WHERE id = $1;
+
+
+-- name: GetTotalUserCount :one
+SELECT COUNT(*) AS total_users
+FROM users;
+
+
 -- name: CreateBlog :one
 INSERT INTO blogs(title,content,user_id,created,updated)
 VALUES ($1,$2,$3,$4,$5)

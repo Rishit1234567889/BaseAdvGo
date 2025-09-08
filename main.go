@@ -5,22 +5,21 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Rishit1234567889/baseToAdvGo/dbconfig"
+	"github.com/Rishit1234567889/baseToAdvGo/config"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/handlers"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/routes"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/store"
-	"github.com/Rishit1234567889/baseToAdvGo/serverconfig"
 )
 
 func main() {
 
-	config, err := serverconfig.LoadConfig() // 1.6 Load config
+	configLd, err := config.LoadConfig() // 1.6 Load config
 	if err != nil {
 		log.Fatalf("Failed to load config %v", err)
 	}
 	fmt.Println("App is running i guess ")
 
-	db := dbconfig.ConnectDB(config.DataBaseUrl) // 2.1 connect to db
+	db := config.ConnectDB(configLd.DataBaseUrl) // 2.1 connect to db
 	defer db.Close()
 
 	queries := store.New(db) // 3.6
@@ -31,7 +30,7 @@ func main() {
 
 	routes.SetupRoutes(mux, handler) // 1.7 (D) setup Routes
 
-	serverAddr := fmt.Sprintf(":%s", config.ServerPort) // 1.1server instance
+	serverAddr := fmt.Sprintf(":%s", configLd.ServerPort) // 1.1server instance
 	server := &http.Server{
 		Addr:    serverAddr,
 		Handler: mux,

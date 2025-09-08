@@ -9,4 +9,5 @@ import (
 func SetupUserRoutes(mux *http.ServeMux, handler *handlers.Handler) {
 
 	mux.HandleFunc("/user/register", handler.CreateUserHandler())
+	mux.HandleFunc("/user/login", handler.LoginUserHandler())
 }
