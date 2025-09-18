@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+
 	// "strings"
 	"time"
 
@@ -14,6 +16,8 @@ import (
 	"github.com/Rishit1234567889/baseToAdvGo/internal/store"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/utils"
 	"github.com/Rishit1234567889/baseToAdvGo/internal/validation"
+	"github.com/cloudinary/cloudinary-go"
+	"github.com/cloudinary/cloudinary-go/api/uploader"
 )
 
 // 5.1
@@ -86,6 +90,57 @@ func (h *Handler) LoginUserHandler() http.HandlerFunc {
 		utils.ResponseWithSuccess(w, http.StatusOK, "Login successful", map[string]string{
 			"token": token,
 		})
+	}
+}
+
+// upload user profile 9.2
+func (h *Handler) UploadProfileImageHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims, ok := r.Context().Value(middlewares.UserClaimsKey).(*utils.Claims)
+		if !ok {
+			utils.ResponseWithError(w, http.StatusBadRequest, "please login  to continue ")
+			return
+		}
+		userID := claims.UserID
+		//upload from the form data
+		err := r.ParseMultipartForm(10 << 20) // max file of 10MB
+		if err != nil {
+			utils.ResponseWithError(w, http.StatusBadRequest, "Error parsing data")
+			return
+		}
+		file, fileHeader, err := r.FormFile("profile_image")
+		if err != nil {
+			utils.ResponseWithError(w, http.StatusBadRequest, "Error retrieving file")
+			return
+		}
+		defer file.Close()
+		cld, err := cloudinary.NewFromParams(
+			os.Getenv("CLOUNDINARY_CLOUD_NAME"),
+			os.Getenv("CLOUNDINARY_API_KEY"),
+			os.Getenv("CLOUDINARY_API_SECRET"),
+		)
+		if err != nil {
+			utils.ResponseWithError(w, http.StatusBadRequest, "Error initiating cloudinary")
+			return
+		}
+
+		uploadedResult, err := cld.Upload.Upload(r.Context(), file, uploader.UploadParams{
+			Folder:   "profile_images",
+			PublicID: fileHeader.Filename,
+		})
+
+		if err != nil {
+			utils.ResponseWithError(w, http.StatusBadRequest, "Error uploading image")
+			return
+		}
+
+		// commit to db
+		h.Queries.CreateUserProfile(r.Context(), store.CreateUserProfileParams{
+			UserID:       int32(userID),
+			ProfileImage: sql.NullString{String: uploadedResult.SecureURL, Valid: uploadedResult.SecureURL != ""},
+		})
+
+		utils.ResponseWithSuccess(w, http.StatusOK, "Image uploaded successfully", uploadedResult.SecureURL)
 	}
 }
 

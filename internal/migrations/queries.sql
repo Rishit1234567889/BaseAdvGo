@@ -42,3 +42,14 @@ VALUES ($1,$2,$3,$4,$5)
 SELECT id ,title,content,user_id,created,updated
 FROM blogs
 ORDER BY id;
+
+-- 9.1
+-- name: CreateUserProfile :one
+INSERT INTO user_profiles (user_id, profile_image)
+VALUES ($1,$2)
+RETURNING id,user_id,profile_image;
+
+-- name: GetUserProfileByUserId :one
+SELECT id ,user_id, profile_image,created,updated
+FROM user_profiles
+WHERE user_id = $1;

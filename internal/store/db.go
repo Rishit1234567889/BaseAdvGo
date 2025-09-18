@@ -30,6 +30,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
+	if q.createUserProfileStmt, err = db.PrepareContext(ctx, createUserProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUserProfile: %w", err)
+	}
 	if q.getProfileByUserIdStmt, err = db.PrepareContext(ctx, getProfileByUserId); err != nil {
 		return nil, fmt.Errorf("error preparing query GetProfileByUserId: %w", err)
 	}
@@ -41,6 +44,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getUserByEmailOrUsernameStmt, err = db.PrepareContext(ctx, getUserByEmailOrUsername); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserByEmailOrUsername: %w", err)
+	}
+	if q.getUserProfileByUserIdStmt, err = db.PrepareContext(ctx, getUserProfileByUserId); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUserProfileByUserId: %w", err)
 	}
 	if q.listBlogsStmt, err = db.PrepareContext(ctx, listBlogs); err != nil {
 		return nil, fmt.Errorf("error preparing query ListBlogs: %w", err)
@@ -63,6 +69,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
 		}
 	}
+	if q.createUserProfileStmt != nil {
+		if cerr := q.createUserProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUserProfileStmt: %w", cerr)
+		}
+	}
 	if q.getProfileByUserIdStmt != nil {
 		if cerr := q.getProfileByUserIdStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getProfileByUserIdStmt: %w", cerr)
@@ -81,6 +92,11 @@ func (q *Queries) Close() error {
 	if q.getUserByEmailOrUsernameStmt != nil {
 		if cerr := q.getUserByEmailOrUsernameStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserByEmailOrUsernameStmt: %w", cerr)
+		}
+	}
+	if q.getUserProfileByUserIdStmt != nil {
+		if cerr := q.getUserProfileByUserIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUserProfileByUserIdStmt: %w", cerr)
 		}
 	}
 	if q.listBlogsStmt != nil {
@@ -134,10 +150,12 @@ type Queries struct {
 	tx                           *sql.Tx
 	createBlogStmt               *sql.Stmt
 	createUserStmt               *sql.Stmt
+	createUserProfileStmt        *sql.Stmt
 	getProfileByUserIdStmt       *sql.Stmt
 	getTotalUserCountStmt        *sql.Stmt
 	getUserStmt                  *sql.Stmt
 	getUserByEmailOrUsernameStmt *sql.Stmt
+	getUserProfileByUserIdStmt   *sql.Stmt
 	listBlogsStmt                *sql.Stmt
 	listUsersStmt                *sql.Stmt
 }
@@ -148,10 +166,12 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tx:                           tx,
 		createBlogStmt:               q.createBlogStmt,
 		createUserStmt:               q.createUserStmt,
+		createUserProfileStmt:        q.createUserProfileStmt,
 		getProfileByUserIdStmt:       q.getProfileByUserIdStmt,
 		getTotalUserCountStmt:        q.getTotalUserCountStmt,
 		getUserStmt:                  q.getUserStmt,
 		getUserByEmailOrUsernameStmt: q.getUserByEmailOrUsernameStmt,
+		getUserProfileByUserIdStmt:   q.getUserProfileByUserIdStmt,
 		listBlogsStmt:                q.listBlogsStmt,
 		listUsersStmt:                q.listUsersStmt,
 	}
